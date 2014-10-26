@@ -1,0 +1,183 @@
+---
+title: "pml_proj1"
+author: "Courseraian"
+date: "October 26, 2014"
+output: html_document
+---
+
+First load all the libraries
+#install.packages("randomForest","rpart","caret")
+```{r, echo=TRUE}
+library (randomForest)
+library(rpart)
+library(caret)
+training<-read.csv("pml-training.csv", stringsAsFactor=FALSE)
+```
+Check the data structure
+
+``` {r, echo=TRUE, eval=FALSE}
+stdim(training)
+str(training)
+table(training$clsse)
+```
+Check those columns with data na and remove those from the data set
+
+
+``` {r, echo=TRUE}
+na_test <- sapply (training, function (x) {sum(is.na(x))}) 
+table(na_test)  # to 
+na_cols <- names(na_test[na_test==19216])
+  
+train_prep1 <- training[,!names(training) %in% na_cols]
+```
+Also Remove rown sequence and user names
+
+```{r,echo=TRUE}
+train_prep2 <- train_prep1[3:93]    
+dim(train_prep2)
+```
+Check near Zero variable to identify those without changes. they may not good predictors. 
+```{r, echo=TRUE}
+nearzero <- nearZeroVar(train_prep2, saveMetrics=T)
+names(nearzero)
+sum(nearzero$nzv)
+
+```
+Remove near zero cols
+```{r}
+# need to do the same for testing data?
+train_nz <- train_prep2[, nearzero$nzv]
+train_rest <- train_prep2[, !nearzero$nzv]
+```
+Partition training set to two diff groups: train_trn is used to build a model, and train_val is used to validate it. 
+
+```{r}
+train_rest_indx <-createDataPartition(y=train_rest$classe, p =0.7, list = FALSE) 
+train_trn <- train_rest[train_rest_indx,]
+train_val <- train_rest[-train_rest_indx,]
+```
+
+Build models
+Warning: This part was messed up at last minutes when I tried different models. I run out of time. 
+```{r, echo=TRUE, eval=FALSE}
+set.seed(4321)
+
+
+rfMod <- train(train_trn[,-1], train_trn$classe, preProcess = c("center", "scale"),trControl=trainControl(method="boot"))
+
+summary(rfMod )
+print(rfMod)
+importance(rfMod)
+imp <- importance(rfMod)
+print(importance(rfMod))
+plot(rfMod)
+plot(importance(rfMod),lty=2, pch=16)
+#imp_sort <- imp[order(imp[,1],decreasing=TRUE)]
+lines(importance(rfMod))
+pred_val <- predict (rfMod, newdata=train_val_comp, type="response")
+train_conf <- confusionMatrix(train_val_comp$classe, pred_val)
+varImp(rfMod) # variale impor
+
+
+
+
+rfMod <- randomForest(train_trn[,-57], train_trn$classe )
+
+summary(rfMod )
+print(rfMod)
+importance(rfMod)
+imp <- importance(rfMod)
+print(importance(rfMod))
+plot(rfMod)
+plot(importance(rfMod),lty=2, pch=16)
+#imp_sort <- imp[order(imp[,1],decreasing=TRUE)]
+lines(importance(rfMod))
+pred_val <- predict (rfMod, newdata=train_val_comp, type="response")
+train_conf <- confusionMatrix(train_val_comp$classe, pred_val)
+varImp(rfMod) # variale importance. same with importance. 
+
+```
+Now bring in test data and be sure to preprocess the test data the same way you preocess the training data
+```{r, echo=TRUE, eval=FALSE}
+testing <-read.csv("pml-testing.csv")
+test_prep2 <- testing[,!names(testing) %in% na_cols]
+
+test_nearzero <- nearZeroVar(testing, saveMetrics=T)
+test_nz <- testing[, nearzero$nzv]
+test_rest <- testing[, !nearzero$nzv]
+test_prep1 <- test_rest[,6:length(test_rest)]
+test_comp <- test_prep1[complete.cases(test_prep1),]
+
+pred_test <- predict (rfMod, newdata=test_comp, type="response")
+
+test_conf <- confusionMatrix(test_comp$classe, pred_test)
+
+varImp(rfMod)
+```
+
+
+```{r,echo=FALSE, eval=FALSE}
+# remove high correlation
+
+
+
+
+
+
+
+tt_prep <- preProcess(train_trn[,-91], method=c("center","scale"), na.remove=TRUE)
+
+#tt_prcomp <- prcomp(train_trn[,-95])
+
+
+####
+# train_trn_comp <- train_trn[complete.cases(train_trn),] 
+# train_val_comp <- train_val[complete.cases(train_val),]
+
+
+
+
+#try rpart
+rpartMod <- train(classe ~., data = train_trn)
+summary(rpartMod )
+plot(rpartMod$finalModel)
+rp_pred_val <- predict (rpartMod, newdata=train_val)
+summary(rp_pred_val)
+rp_train_conf <- confusionMatrix(train_val$classe, rp_pred_val)
+
+# try random forest
+rfMod <- randomForest(classe ~., data = na.omit(train_trn))
+summary(rfMod )
+print(rfMod)
+importance(rfMod)
+imp <- importance(rfMod)
+print(importance(rfMod))
+plot(rfMod)
+plot(importance(rfMod),lty=2, pch=16)
+#imp_sort <- imp[order(imp[,1],decreasing=TRUE)]
+lines(importance(rfMod))
+pred_val <- predict (rfMod, newdata=train_val_comp, type="response")
+train_conf <- confusionMatrix(train_val_comp$classe, pred_val)
+varImp(rfMod) # variale importance. same with importance. 
+
+
+
+# remove high correlation
+
+
+
+# try lda
+
+ldaMod <- train (classe~., data = train_trn, method='lda')
+
+# try glm
+
+ldaMod <- train (classe~., data = train_trn,method='glm')
+
+
+preProcess
+
+
+
+
+
